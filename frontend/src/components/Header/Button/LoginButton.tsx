@@ -1,32 +1,32 @@
-import {useState} from 'react';
-import {Button, LogInModal} from '@components';
-import {User} from '@providers';
+import { useState } from "react";
+import { Button, LogInModal } from "@components";
+import { User } from "@providers";
 
 interface LogInButtonProps {
-  user: User | null;
+	user: User | null;
 }
 
 export const LogInButton = ({ user }: LogInButtonProps) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+	const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  const handleOpenModal = () => {
-    if (!user) {
-      setIsModalOpen(true);
-    } else {
-      window.location.reload();
-    }
-  };
+	const handleOpenLoginModal = () => {
+		if (!user) {
+			setIsLoginModalOpen(true);
+		} else {
+			window.location.reload();
+		}
+	};
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+	const handleCloseLoginModal = () => {
+		setIsLoginModalOpen(false);
+	};
 
-  return (
-    <>
-      <Button className='w-24 h-10' onClick={handleOpenModal}>
-        Log In
-      </Button>
-      <LogInModal isOpen={isModalOpen} onClose={handleCloseModal} />
-    </>
-  );
+	return (
+		<>
+			<Button className="w-24 h-10" onClick={handleOpenLoginModal}>
+				Log In
+			</Button>
+			<LogInModal isOpen={isLoginModalOpen} onClose={handleCloseLoginModal} />
+		</>
+	);
 };

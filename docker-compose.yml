@@ -1,13 +1,15 @@
-version: '3.8'
+version: '3.9'
 
 services:
   backend:
     container_name: backend
-    build: backend/backend
+    build: ./backend
+    ports:
+      - "8000:8000"
+      - "9000:9000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - internal-network
-      - default
     environment:
       CELERY_BROKER_URL: ${REDIS_URL}
       CELERY_RESULT_BACKEND: ${REDIS_URL}
@@ -22,12 +24,45 @@ services:
       SECRET_KEY: ${SECRET_KEY}
     restart: unless-stopped
     volumes:
-      - ./backend/backend:/app
+      - ./backend:/app
 
-  db:
+  email:
+    container_name: email
+    build: ./email-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - internal-network
-      - default
+    environment:
+      REDIS_BROKER_URL: ${REDIS_BROKER_URL}
+    depends_on:
+      - celery
+    restart: unless-stopped
+    volumes:
+      - ./email-backend:/app
+
+  celery:
+    container_name: celery
+    build: ./celery-backend
+    networks:
+      - internal-network
+    environment:
+      CELERY_BROKER_URL: ${REDIS_URL}
+      CELERY_RESULT_BACKEND: ${REDIS_URL}
+      MAILTRAP_BEARER_TOKEN: ${MAILTRAP_BEARER_TOKEN}
+      MAILTRAP_API_KEY: ${MAILTRAP_API_KEY}
+    depends_on:
+      - redis
+    command: celery -A worker worker -B --loglevel=info
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "celery inspect ping" ]
+    volumes:
+      - ./celery-backend:/app
+
+  db:
+    container_name: db
+    networks:
+      - internal-network
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: ${POSTGRES_HOST}
@@ -36,78 +71,24 @@ services:
     healthcheck:
       interval: 5s
       retries: 10
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
     image: postgres:14.1-alpine
     ports:
       - '5432:5432'
     restart: unless-stopped
     volumes:
       - ./postgres:/var/lib/postgresql/data
-      - ./backend/db:/docker-entrypoint-initdb.d/
+      - ./db:/docker-entrypoint-initdb.d/
 
   redis:
+    container_name: redis
+    networks:
+      - internal-network
     image: redis:7.0.7-alpine
     ports:
       - "6379"
     command: redis-server --loglevel verbose
     restart: unless-stopped
-
-  scheduler:
-    environment:
-      CELERY_BROKER_URL: ${REDIS_URL}
-      CELERY_RESULT_BACKEND: ${REDIS_URL}
-      TASK_RUNNER_DATABASE_URL: ${TASK_RUNNER_DATABASE_URL}
-      DATABASE_URL: ${DATABASE_URL}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
-      ALGORITHM: ${ALGORITHM}
-      SECRET_KEY: ${SECRET_KEY}
-    depends_on:
-      - redis
-    build:
-      context: backend/backend
-    command: celery -A app.utils.worker worker -B --loglevel=info
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "celery inspect ping"]
-    volumes:
-      - ./backend/backend:/app
-
-  scheduler-gui:
-    environment:
-      CELERY_BROKER_URL: ${REDIS_URL}
-    links:
-      - scheduler
-    ports:
-      - "5555:5555"
-    depends_on:
-      scheduler:
-        condition: service_healthy
-    image: mher/flower:1.2.0
-    restart: unless-stopped
-
-  caddy:
-     image: caddy:2.6.2-alpine
-     networks:
-       - internal-network
-       - default
-     ports:
-       - '80:80'
-       - '443:443'
-       - '8000:8000'
-       - '9000:9000'
-     environment:
-       BACKEND_URL: ${BACKEND_URL}
-       BACKEND_CONTAINER_URL: ${BACKEND_CONTAINER_URL}
-       DEBUG_URL: ${DEBUG_URL}
-       DEBUG_CONTAINER_URL: ${DEBUG_CONTAINER_URL}
-     volumes:
-       - ./Caddyfile:/etc/caddy/Caddyfile
-       - caddy_data:/data
-       - caddy_config:/config
-
-volumes:
-  caddy_config: null
-  caddy_data: null
 
 networks:
   internal-network:

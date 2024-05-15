@@ -1,0 +1,26 @@
+[project]
+name = "tori-soup-email"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "vi.channnnn", email = "violet@himaa.me"},
+]
+dependencies = [
+    "fastapi>=0.110.0",
+    "requests==2.31.0",
+    "celery==5.3.6",
+    "uvicorn>=0.27.1",
+    "pydantic[email]==2.6.0",
+    "redis>=5.0.2",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true

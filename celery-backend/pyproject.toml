@@ -1,0 +1,25 @@
+[project]
+name = "tori-soup-celery"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "vi.channnnn", email = "violet@himaa.me"},
+]
+dependencies = [
+    "pydantic>=2.6.3",
+    "httpx>=0.27.0",
+    "jinja2>=3.1.3",
+    "celery>=5.3.6",
+    "redis>=5.0.2",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true

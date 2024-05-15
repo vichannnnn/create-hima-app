@@ -1,2 +1,2 @@
-export * from './AuthProvider';
-export * from './MediaQueryProvider';
+export * from "./AuthProvider";
+export * from "./MediaQueryProvider";

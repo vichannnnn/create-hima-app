@@ -1,1 +1,1 @@
-export * from './PasswordValidation';
+export * from "./PasswordValidation";
