@@ -2,6 +2,7 @@ import datetime
 from typing import Optional, Annotated
 
 from app.schemas.base import CustomBaseModel as BaseModel
+from app.enum.role import UserRole
 from pydantic import StringConstraints, EmailStr
 
 valid_username = Annotated[
@@ -58,6 +59,7 @@ class AccountSchema(AccountRegisterSchema):
 class CurrentUserSchema(BaseModel):
     user_id: int
     username: valid_username  # type: ignore
+    role: UserRole
 
 
 class AuthSchema(BaseModel):
@@ -73,5 +75,6 @@ class AuthSchema(BaseModel):
 class UserProfile(BaseModel):
     user_id: int
     username: str
+    role: UserRole
     date_joined: datetime.datetime
     last_login_date: datetime.datetime

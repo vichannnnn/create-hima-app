@@ -5,7 +5,7 @@ from app.schemas.user import (
     CurrentUserSchema,
     AuthSchema,
 )
-from fastapi import APIRouter, Response, Request
+from fastapi import APIRouter, Response
 
 router = APIRouter()
 

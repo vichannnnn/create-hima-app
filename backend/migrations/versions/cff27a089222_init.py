@@ -23,6 +23,11 @@ def upgrade():
         sa.Column("user_id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("username", sa.String(), nullable=False),
         sa.Column("email", sa.String(), nullable=False),
+        sa.Column(
+            "role",
+            sa.Enum("USER", "ADMIN", name="userroleenum"),
+            nullable=False,
+        ),
         sa.Column("password", sa.String(), nullable=False),
         sa.Column(
             "is_email_verified", sa.Boolean(), server_default="f", nullable=False

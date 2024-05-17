@@ -15,12 +15,13 @@ from app.schemas.user import (
     AuthSchema,
     CurrentUserSchema,
 )
+from app.enum.role import UserRole
 from app.utils.auth import Authenticator, ALGORITHM, SECRET_KEY, generate_password
 from app.utils.exceptions import AppError
 from fastapi import Response as FastAPIResponse
 from pydantic import EmailStr
 from sqlalchemy import exc as SQLAlchemyExceptions
-from sqlalchemy import select, update, Index, func, DateTime, or_
+from sqlalchemy import select, update, Index, func, DateTime, or_, Enum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, synonym
 from sqlalchemy.sql.expression import text
@@ -45,6 +46,7 @@ class Account(Base, CRUD["Account"]):
         primary_key=True, index=True, autoincrement=True
     )
     username: Mapped[str] = mapped_column(nullable=False, index=True, unique=True)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
     email: Mapped[str] = mapped_column(nullable=False, unique=True)
     password: Mapped[str] = mapped_column(nullable=False)
     is_email_verified: Mapped[bool] = mapped_column(nullable=False, server_default="f")
