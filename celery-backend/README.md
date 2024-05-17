@@ -1,1 +1,1 @@
-# tori-soup-celery
+# create-hima-app-celery
