@@ -13,7 +13,6 @@ from app.schemas.user import (
     AccountCredentialsSchema,
     AccountUpdatePasswordSchema,
     AuthSchema,
-    CurrentUserWithJWTSchema,
     CurrentUserSchema,
 )
 from app.utils.auth import Authenticator, ALGORITHM, SECRET_KEY, generate_password
@@ -62,8 +61,11 @@ class Account(Base, CRUD["Account"]):
 
     @classmethod
     async def register(
-            cls, session: AsyncSession, data: AccountRegisterSchema
-    ) -> CurrentUserWithJWTSchema:
+        cls,
+        session: AsyncSession,
+        data: AccountRegisterSchema,
+        response: FastAPIResponse,
+    ) -> CurrentUserSchema:
         username = data.username
         password = data.password
         repeat_password = data.repeat_password
@@ -92,7 +94,9 @@ class Account(Base, CRUD["Account"]):
         session.add(new_account)
 
         if not TESTING_FLAG:
-            confirm_url = f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
+            confirm_url = (
+                f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
+            )
 
             email_ms_client = httpx.AsyncClient()
             payload = {
@@ -100,11 +104,11 @@ class Account(Base, CRUD["Account"]):
                 "username": username,
                 "confirm_url": confirm_url,
             }
-            response = await email_ms_client.post(
+            email_ms_resp = await email_ms_client.post(
                 REGISTER_ACCOUNT_VERIFICATION_EMAIL_URL, json=payload
             )
 
-            if response.status_code != 200:
+            if email_ms_resp.status_code != 200:
                 raise AppError.EMAIL_MICROSERVICE_ERROR
 
         await session.commit()
@@ -113,14 +117,16 @@ class Account(Base, CRUD["Account"]):
         access_token = Authenticator.create_access_token(data={"sub": data.username})
         decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
 
-        return CurrentUserWithJWTSchema(
-            data=CurrentUserSchema(
-                user_id=new_account.user_id,
-                username=new_account.username,
-            ),
-            access_token=access_token,
-            token_type="bearer",
-            exp=decoded_token["exp"],
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            max_age=decoded_token["exp"],
+        )
+
+        return CurrentUserSchema(
+            user_id=new_account.user_id,
+            username=new_account.username,
         )
 
     @classmethod
@@ -129,7 +135,9 @@ class Account(Base, CRUD["Account"]):
 
         if not res.is_email_verified:
             email_verification_token = uuid4().hex
-            confirm_url = f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
+            confirm_url = (
+                f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
+            )
 
             stmt = (
                 update(Account)
@@ -159,7 +167,7 @@ class Account(Base, CRUD["Account"]):
 
     @classmethod
     async def select_from_username(
-            cls, session: AsyncSession, username: str
+        cls, session: AsyncSession, username: str
     ) -> Optional[AccountCredentialsSchema]:
         try:
             stmt = select(Account).where(Account.username.ilike(username))
@@ -171,40 +179,41 @@ class Account(Base, CRUD["Account"]):
 
     @classmethod
     async def login(
-            cls, session: AsyncSession, data: AuthSchema
-    ) -> CurrentUserWithJWTSchema:
+        cls, session: AsyncSession, data: AuthSchema, response: FastAPIResponse
+    ) -> CurrentUserSchema:
         if not (credentials := await cls.select_from_username(session, data.username)):
             raise AppError.INVALID_CREDENTIALS_ERROR
         if not Authenticator.pwd_context.verify(data.password, credentials.password):
             raise AppError.INVALID_CREDENTIALS_ERROR
 
+        # TODO: Gotta move this response cookie setting into a common method for both register and login.
+
         access_token = Authenticator.create_access_token(data={"sub": data.username})
         decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
 
-        current_user = CurrentUserSchema(
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            max_age=decoded_token["exp"],
+        )
+
+        return CurrentUserSchema(
             user_id=credentials.user_id,
             username=credentials.username,
         )
-        res = CurrentUserWithJWTSchema(
-            data=current_user,
-            access_token=access_token,
-            token_type="bearer",
-            exp=decoded_token["exp"],
-        )
-
-        return res
 
     @classmethod
     async def update_password(
-            cls, session: AsyncSession, user_id: int, data: AccountUpdatePasswordSchema
+        cls, session: AsyncSession, user_id: int, data: AccountUpdatePasswordSchema
     ) -> FastAPIResponse:
         if data.before_password is None or data.password is None:
             raise AppError.BAD_REQUEST_ERROR
 
         curr = await Account.get(session, id=user_id)
         if (
-                not Authenticator.pwd_context.verify(data.before_password, curr.password)
-                or not curr
+            not Authenticator.pwd_context.verify(data.before_password, curr.password)
+            or not curr
         ):
             raise AppError.INVALID_CREDENTIALS_ERROR
 
@@ -225,7 +234,7 @@ class Account(Base, CRUD["Account"]):
 
     @classmethod
     async def update_email(
-            cls, session: AsyncSession, user_id: int, data: AccountUpdateEmailSchema
+        cls, session: AsyncSession, user_id: int, data: AccountUpdateEmailSchema
     ) -> FastAPIResponse:
         stmt = select(cls).where(cls.user_id == user_id)
         result = await session.execute(stmt)
@@ -255,7 +264,9 @@ class Account(Base, CRUD["Account"]):
         await session.flush()
 
         if not TESTING_FLAG:
-            confirm_url = f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
+            confirm_url = (
+                f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
+            )
 
             email_ms_client = httpx.AsyncClient()
             payload = {

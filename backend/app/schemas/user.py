@@ -60,13 +60,6 @@ class CurrentUserSchema(BaseModel):
     username: valid_username  # type: ignore
 
 
-class CurrentUserWithJWTSchema(BaseModel):
-    data: CurrentUserSchema
-    access_token: str
-    token_type: str
-    exp: int
-
-
 class AuthSchema(BaseModel):
     model_config = {
         "json_schema_extra": {

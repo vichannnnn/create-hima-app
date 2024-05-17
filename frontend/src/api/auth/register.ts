@@ -1,12 +1,7 @@
 import {apiClient} from "@apiClient";
 import {AxiosResponse} from "axios";
+import {RegisterDetails} from "@providers";
 
-export interface RegisterDetails {
-    username: string;
-    password: string;
-    repeat_password: string;
-    email: string;
-}
 
 export async function register(
     accountDetails: RegisterDetails,

@@ -18,11 +18,11 @@ APPLICATION_JSON_TYPE = "application/json"
 
 
 def send_email_verification_mail(
-        sender_name: str,
-        from_email: str,
-        to_email: EmailStr,
-        confirm_url: str,
-        username: str,
+    sender_name: str,
+    from_email: str,
+    to_email: EmailStr,
+    confirm_url: str,
+    username: str,
 ):
     payload = {
         "to": [{"email": to_email}],
@@ -45,11 +45,11 @@ def send_email_verification_mail(
 
 
 def send_reset_password_mail(
-        sender_name: str,
-        from_email: str,
-        to_email: EmailStr,
-        confirm_url: str,
-        username: str,
+    sender_name: str,
+    from_email: str,
+    to_email: EmailStr,
+    confirm_url: str,
+    username: str,
 ):
     payload = {
         "to": [{"email": to_email}],
@@ -72,7 +72,7 @@ def send_reset_password_mail(
 
 
 def send_new_password_mail(
-        sender_name: str, from_email: str, to_email: EmailStr, username: str, password: str
+    sender_name: str, from_email: str, to_email: EmailStr, username: str, password: str
 ):
     payload = {
         "to": [{"email": to_email}],

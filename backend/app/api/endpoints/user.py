@@ -4,32 +4,32 @@ from app.schemas.user import (
     AccountRegisterSchema,
     CurrentUserSchema,
     AuthSchema,
-    CurrentUserWithJWTSchema,
 )
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, Request
 
 router = APIRouter()
 
 
-@router.post("/create", response_model=CurrentUserWithJWTSchema)
+@router.post("/create", response_model=CurrentUserSchema)
 async def create_account(
-        session: CurrentSession,
-        data: AccountRegisterSchema,
-) -> CurrentUserWithJWTSchema:
-    created_user = await Account.register(session, data)
+    session: CurrentSession,
+    data: AccountRegisterSchema,
+    response: Response,
+) -> CurrentUserSchema:
+    created_user = await Account.register(session, data, response)
     return created_user
 
 
-@router.get("/get", response_model=CurrentUserSchema)
+@router.get("/get")
 async def get_account_name(
-        current_user: SessionUser,
-) -> CurrentUserSchema:
+    current_user: SessionUser,
+):
     return current_user
 
 
-@router.post("/login", response_model=CurrentUserWithJWTSchema)
+@router.post("/login", response_model=CurrentUserSchema)
 async def user_login(
-        session: CurrentSession, data: AuthSchema
-) -> CurrentUserWithJWTSchema:
-    res = await Account.login(session, data)
+    session: CurrentSession, data: AuthSchema, response: Response
+) -> CurrentUserSchema:
+    res = await Account.login(session, data, response)
     return res

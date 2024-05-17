@@ -5,7 +5,7 @@ from worker import celery_app
 
 @celery_app.task
 def send_account_verification_email_task(
-        email: EmailStr, username: str, confirm_url: str
+    email: EmailStr, username: str, confirm_url: str
 ):
     try:
         send_email_verification_mail(

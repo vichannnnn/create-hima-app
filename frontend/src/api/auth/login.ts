@@ -1,12 +1,12 @@
 import {apiClient} from "@apiClient";
-import {CurrentUserWithJWT, LogInDetails} from "@providers";
+import {LogInDetails, User} from "@providers";
 import {AxiosError, AxiosResponse} from "axios";
 
 export async function login(
     formData: LogInDetails,
-): Promise<CurrentUserWithJWT> {
+): Promise<User> {
     try {
-        const response: AxiosResponse<CurrentUserWithJWT> = await apiClient.post(
+        const response: AxiosResponse<User> = await apiClient.post(
             "/user/login",
             formData,
         );

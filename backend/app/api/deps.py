@@ -6,7 +6,7 @@ from app.models.user import Account
 from app.schemas.user import CurrentUserSchema
 from app.utils.auth import Authenticator, ALGORITHM, SECRET_KEY
 from app.utils.exceptions import AppError
-from fastapi import Depends
+from fastapi import Depends, Request
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -28,48 +28,36 @@ OAuth2Session = Annotated[
 ]
 
 
-async def get_current_user(
-        session: CurrentSession,
-        token: str = Depends(Authenticator.oauth2_scheme),
+async def get_user_from_cookie(
+    session: CurrentSession, request: Request
 ) -> CurrentUserSchema:
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
-        if username := payload.get("sub"):
-            if user := await Account.select_from_username(session, username):
-                return CurrentUserSchema(
-                    user_id=user.user_id, username=username
-                )
+    token = request.cookies.get("access_token")
+    if not token:
+        raise AppError.INVALID_CREDENTIALS_ERROR
 
-    except JWTError as exc:
-        raise AppError.INVALID_CREDENTIALS_ERROR from exc
-    raise AppError.INVALID_CREDENTIALS_ERROR
+    payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+    username = payload.get("sub")
+    user = await Account.select_from_username(session, username) if username else None
+    if user is None:
+        raise AppError.INVALID_CREDENTIALS_ERROR
+    return CurrentUserSchema(user_id=user.user_id, username=username)
+
+
+async def get_current_user(
+    session: CurrentSession,
+    request: Request,
+) -> CurrentUserSchema:
+    return await get_user_from_cookie(session, request)
 
 
 async def get_verified_user(
-        session: CurrentSession,
-        token: OAuth2Session,
+    session: CurrentSession,
+    request: Request,
 ) -> CurrentUserSchema:
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
-
-        username = payload.get("sub")
-        user = (
-            await Account.select_from_username(session, username) if username else None
-        )
-
-        if username and user and user.verified:
-            return CurrentUserSchema(
-                user_id=user.user_id,
-                username=username,
-                email=user.email,
-                verified=user.verified,
-            )
-
-        else:
-            raise AppError.PERMISSION_DENIED_ERROR
-
-    except JWTError as exc:
-        raise AppError.INVALID_CREDENTIALS_ERROR from exc
+    user = await get_user_from_cookie(session, request)
+    if not user.verified:
+        raise AppError.PERMISSION_DENIED_ERROR
+    return user
 
 
 SessionUser = Annotated[CurrentUserSchema, Depends(get_current_user)]
