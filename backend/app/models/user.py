@@ -1,19 +1,18 @@
 import datetime
-from os import environ
 from typing import Optional
 from uuid import uuid4
 
-import httpx
-import jwt
+from httpx import AsyncClient
+from jwt import decode
 from app.crud.base import CRUD
 from app.db.base_class import Base
-from app.schemas.email import AccountUpdateEmailSchema
+from app.schemas.email import AccountUpdateEmailBody
 from app.schemas.user import (
-    AccountRegisterSchema,
-    AccountCredentialsSchema,
-    AccountUpdatePasswordSchema,
-    AuthSchema,
-    CurrentUserSchema,
+    AccountRegisterBody,
+    AccountCredentialsBody,
+    AccountUpdatePasswordBody,
+    AuthBody,
+    CurrentUserBody,
 )
 from app.enum.role import UserRole
 from app.utils.auth import Authenticator, ALGORITHM, SECRET_KEY, generate_password
@@ -25,15 +24,13 @@ from sqlalchemy import select, update, Index, func, DateTime, or_, Enum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, synonym
 from sqlalchemy.sql.expression import text
-
-TESTING_FLAG = environ.get("TESTING")
-FRONTEND_URL = environ.get("FRONTEND_URL")
-EMAIL_MICROSERVICE_URL = "http://email:8000"
-REGISTER_ACCOUNT_VERIFICATION_EMAIL_URL = (
-    f"{EMAIL_MICROSERVICE_URL}/email/send_account_verification"
+from app.utils.env import (
+    TESTING as TESTING_FLAG,
+    FRONTEND_URL,
+    REGISTER_ACCOUNT_VERIFICATION_EMAIL_URL,
+    SEND_RESET_PASSWORD_EMAIL_URL,
+    SEND_NEW_PASSWORD_EMAIL_URL,
 )
-SEND_RESET_PASSWORD_EMAIL_URL = f"{EMAIL_MICROSERVICE_URL}/email/send_reset_password"
-SEND_NEW_PASSWORD_EMAIL_URL = f"{EMAIL_MICROSERVICE_URL}/email/send_new_password"
 
 
 class Account(Base, CRUD["Account"]):
@@ -46,7 +43,9 @@ class Account(Base, CRUD["Account"]):
         primary_key=True, index=True, autoincrement=True
     )
     username: Mapped[str] = mapped_column(nullable=False, index=True, unique=True)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole), default=UserRole.USER, nullable=False
+    )
     email: Mapped[str] = mapped_column(nullable=False, unique=True)
     password: Mapped[str] = mapped_column(nullable=False)
     is_email_verified: Mapped[bool] = mapped_column(nullable=False, server_default="f")
@@ -65,9 +64,9 @@ class Account(Base, CRUD["Account"]):
     async def register(
         cls,
         session: AsyncSession,
-        data: AccountRegisterSchema,
+        data: AccountRegisterBody,
         response: FastAPIResponse,
-    ) -> CurrentUserSchema:
+    ) -> CurrentUserBody:
         username = data.username
         password = data.password
         repeat_password = data.repeat_password
@@ -100,7 +99,7 @@ class Account(Base, CRUD["Account"]):
                 f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
             )
 
-            email_ms_client = httpx.AsyncClient()
+            email_ms_client = AsyncClient()
             payload = {
                 "email": data.email,
                 "username": username,
@@ -117,7 +116,7 @@ class Account(Base, CRUD["Account"]):
         await session.refresh(new_account)
 
         access_token = Authenticator.create_access_token(data={"sub": data.username})
-        decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded_token = decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
 
         response.set_cookie(
             key="access_token",
@@ -126,7 +125,7 @@ class Account(Base, CRUD["Account"]):
             max_age=decoded_token["exp"],
         )
 
-        return CurrentUserSchema(
+        return CurrentUserBody(
             user_id=new_account.user_id,
             username=new_account.username,
         )
@@ -149,7 +148,7 @@ class Account(Base, CRUD["Account"]):
             )
             await session.execute(stmt)
 
-            email_ms_client = httpx.AsyncClient()
+            email_ms_client = AsyncClient()
             payload = {
                 "email": res.email,
                 "username": res.username,
@@ -170,7 +169,7 @@ class Account(Base, CRUD["Account"]):
     @classmethod
     async def select_from_username(
         cls, session: AsyncSession, username: str
-    ) -> Optional[AccountCredentialsSchema]:
+    ) -> Optional[AccountCredentialsBody]:
         try:
             stmt = select(Account).where(Account.username.ilike(username))
             res = await session.execute(stmt)
@@ -181,8 +180,8 @@ class Account(Base, CRUD["Account"]):
 
     @classmethod
     async def login(
-        cls, session: AsyncSession, data: AuthSchema, response: FastAPIResponse
-    ) -> CurrentUserSchema:
+        cls, session: AsyncSession, data: AuthBody, response: FastAPIResponse
+    ) -> CurrentUserBody:
         if not (credentials := await cls.select_from_username(session, data.username)):
             raise AppError.INVALID_CREDENTIALS_ERROR
         if not Authenticator.pwd_context.verify(data.password, credentials.password):
@@ -191,7 +190,7 @@ class Account(Base, CRUD["Account"]):
         # TODO: Gotta move this response cookie setting into a common method for both register and login.
 
         access_token = Authenticator.create_access_token(data={"sub": data.username})
-        decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded_token = decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
 
         response.set_cookie(
             key="access_token",
@@ -200,14 +199,14 @@ class Account(Base, CRUD["Account"]):
             max_age=decoded_token["exp"],
         )
 
-        return CurrentUserSchema(
+        return CurrentUserBody(
             user_id=credentials.user_id,
             username=credentials.username,
         )
 
     @classmethod
     async def update_password(
-        cls, session: AsyncSession, user_id: int, data: AccountUpdatePasswordSchema
+        cls, session: AsyncSession, user_id: int, data: AccountUpdatePasswordBody
     ) -> FastAPIResponse:
         if data.before_password is None or data.password is None:
             raise AppError.BAD_REQUEST_ERROR
@@ -236,7 +235,7 @@ class Account(Base, CRUD["Account"]):
 
     @classmethod
     async def update_email(
-        cls, session: AsyncSession, user_id: int, data: AccountUpdateEmailSchema
+        cls, session: AsyncSession, user_id: int, data: AccountUpdateEmailBody
     ) -> FastAPIResponse:
         stmt = select(cls).where(cls.user_id == user_id)
         result = await session.execute(stmt)
@@ -270,7 +269,7 @@ class Account(Base, CRUD["Account"]):
                 f"{FRONTEND_URL}/verify-account?token={email_verification_token}"
             )
 
-            email_ms_client = httpx.AsyncClient()
+            email_ms_client = AsyncClient()
             payload = {
                 "email": updated_account.email,
                 "username": updated_account.username,
@@ -313,7 +312,7 @@ class Account(Base, CRUD["Account"]):
         account = result.scalar()
 
         try:
-            email_ms_client = httpx.AsyncClient()
+            email_ms_client = AsyncClient()
             payload = {
                 "email": email,
                 "username": account.username,
@@ -351,7 +350,7 @@ class Account(Base, CRUD["Account"]):
 
         password = generate_password()
 
-        email_ms_client = httpx.AsyncClient()
+        email_ms_client = AsyncClient()
         payload = {
             "email": account.email,
             "username": account.username,

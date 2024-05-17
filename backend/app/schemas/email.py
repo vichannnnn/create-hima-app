@@ -2,23 +2,23 @@ from pydantic import EmailStr
 from app.schemas.base import CustomBaseModel as BaseModel
 
 
-class SendVerificationTokenSchema(BaseModel):
+class SendVerificationTokenBody(BaseModel):
     email: EmailStr
     username: str
     token: str
 
 
-class SendPasswordResetEmailSchema(BaseModel):
+class SendPasswordResetEmailBody(BaseModel):
     email: EmailStr
 
 
-class SendNewPasswordSchema(BaseModel):
+class SendNewPasswordBody(BaseModel):
     token: str
 
 
-class VerifyEmailSchema(BaseModel):
+class VerifyEmailBody(BaseModel):
     token: str
 
 
-class AccountUpdateEmailSchema(BaseModel):
+class AccountUpdateEmailBody(BaseModel):
     new_email: EmailStr  # type: ignore

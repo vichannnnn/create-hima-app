@@ -16,7 +16,7 @@ valid_password = Annotated[
 ]
 
 
-class AccountRegisterSchema(BaseModel):
+class AccountRegisterBody(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -36,33 +36,33 @@ class AccountRegisterSchema(BaseModel):
     email: EmailStr
 
 
-class AccountCreateSchema(BaseModel):
+class AccountCreateBody(BaseModel):
     username: valid_username  # type: ignore
     password: str
 
 
-class AccountCredentialsSchema(AccountCreateSchema):
+class AccountCredentialsBody(AccountCreateBody):
     user_id: int
 
 
-class AccountUpdatePasswordSchema(BaseModel):
+class AccountUpdatePasswordBody(BaseModel):
     before_password: Optional[valid_password]  # type: ignore
     password: Optional[valid_password]  # type: ignore
     repeat_password: Optional[valid_password]  # type: ignore
 
 
-class AccountSchema(AccountRegisterSchema):
+class AccountBody(AccountRegisterBody):
     user_id: Optional[int]
     repeat_password: Optional[str]
 
 
-class CurrentUserSchema(BaseModel):
+class CurrentUserBody(BaseModel):
     user_id: int
     username: valid_username  # type: ignore
     role: UserRole
 
 
-class AuthSchema(BaseModel):
+class AuthBody(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [{"username": "hima", "password": "Password123@"}]

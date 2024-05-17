@@ -5,8 +5,8 @@ from app import schemas
 
 
 @pytest.fixture(name="test_valid_account")
-def test_valid_account() -> Generator[schemas.user.AccountRegisterSchema, None, None]:
-    yield schemas.user.AccountRegisterSchema(
+def test_valid_account() -> Generator[schemas.user.AccountRegisterBody, None, None]:
+    yield schemas.user.AccountRegisterBody(
         username="validusername",
         password="Validpassword123!",
         repeat_password="Validpassword123!",

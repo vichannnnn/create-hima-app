@@ -1,9 +1,9 @@
 from app.models.user import Account
 from app.schemas.email import (
-    AccountUpdateEmailSchema,
-    VerifyEmailSchema,
-    SendPasswordResetEmailSchema,
-    SendNewPasswordSchema,
+    AccountUpdateEmailBody,
+    VerifyEmailBody,
+    SendPasswordResetEmailBody,
+    SendNewPasswordBody,
 )
 from app.api.deps import CurrentSession, SessionUser
 from fastapi import APIRouter, status
@@ -15,14 +15,14 @@ router = APIRouter()
 async def user_update_email(
     session: CurrentSession,
     authenticated: SessionUser,
-    data: AccountUpdateEmailSchema,
+    data: AccountUpdateEmailBody,
 ):
     credentials = await Account.update_email(session, authenticated.user_id, data)
     return credentials
 
 
 @router.post("/verify")
-async def verify_email(session: CurrentSession, data: VerifyEmailSchema):
+async def verify_email(session: CurrentSession, data: VerifyEmailBody):
     await Account.verify_email(session, data.token)
     return status.HTTP_200_OK
 
@@ -39,7 +39,7 @@ async def resend_verify_email_token(
 @router.post("/send_reset_password_mail")
 async def send_reset_password_mail(
     session: CurrentSession,
-    data: SendPasswordResetEmailSchema,
+    data: SendPasswordResetEmailBody,
 ):
     await Account.send_reset_email(session, data.email)
     return status.HTTP_200_OK
@@ -48,7 +48,7 @@ async def send_reset_password_mail(
 @router.post("/reset_password")
 async def reset_password(
     session: CurrentSession,
-    data: SendNewPasswordSchema,
+    data: SendNewPasswordBody,
 ):
     await Account.reset_password(session, data.token)
     return status.HTTP_200_OK

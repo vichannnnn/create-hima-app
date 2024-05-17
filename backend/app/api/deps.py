@@ -3,11 +3,11 @@ from typing import AsyncGenerator, Generator
 
 from app.db.database import SessionLocal, async_session
 from app.models.user import Account
-from app.schemas.user import CurrentUserSchema
+from app.schemas.user import CurrentUserBody
 from app.utils.auth import Authenticator, ALGORITHM, SECRET_KEY
 from app.utils.exceptions import AppError
 from fastapi import Depends, Request
-from jose import JWTError, jwt
+from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
@@ -30,7 +30,7 @@ OAuth2Session = Annotated[
 
 async def get_user_from_cookie(
     session: CurrentSession, request: Request
-) -> CurrentUserSchema:
+) -> CurrentUserBody:
     token = request.cookies.get("access_token")
     if not token:
         raise AppError.INVALID_CREDENTIALS_ERROR
@@ -40,25 +40,25 @@ async def get_user_from_cookie(
     user = await Account.select_from_username(session, username) if username else None
     if user is None:
         raise AppError.INVALID_CREDENTIALS_ERROR
-    return CurrentUserSchema(user_id=user.user_id, username=username)
+    return CurrentUserBody(user_id=user.user_id, username=username)
 
 
 async def get_current_user(
     session: CurrentSession,
     request: Request,
-) -> CurrentUserSchema:
+) -> CurrentUserBody:
     return await get_user_from_cookie(session, request)
 
 
 async def get_verified_user(
     session: CurrentSession,
     request: Request,
-) -> CurrentUserSchema:
+) -> CurrentUserBody:
     user = await get_user_from_cookie(session, request)
     if not user.verified:
         raise AppError.PERMISSION_DENIED_ERROR
     return user
 
 
-SessionUser = Annotated[CurrentUserSchema, Depends(get_current_user)]
-SessionVerifiedUser = Annotated[CurrentUserSchema, Depends(get_verified_user)]
+SessionUser = Annotated[CurrentUserBody, Depends(get_current_user)]
+SessionVerifiedUser = Annotated[CurrentUserBody, Depends(get_verified_user)]
