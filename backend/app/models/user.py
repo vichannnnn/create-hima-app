@@ -128,6 +128,7 @@ class Account(Base, CRUD["Account"]):
         return CurrentUserBody(
             user_id=new_account.user_id,
             username=new_account.username,
+            role=UserRole.USER
         )
 
     @classmethod

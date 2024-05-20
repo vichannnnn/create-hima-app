@@ -20,8 +20,6 @@
     "@mui/icons-material": "^5.15.12",
     "@mui/material": "^5.15.12",
     "axios": "^1.6.7",
-    "jwt-decode": "^3.1.2",
-    "next-mdx-remote": "^4.4.1",
     "react-hook-form": "^7.48.2",
     "sharp": "^0.33.2",
     "yup": "^1.3.2"

@@ -7,6 +7,7 @@ Create Date: 2024-05-14 17:58:22.261440
 """
 from alembic import op
 import sqlalchemy as sa
+from app.enum.user import UserRoleEnum
 
 
 # revision identifiers, used by Alembic.
@@ -25,8 +26,8 @@ def upgrade():
         sa.Column("email", sa.String(), nullable=False),
         sa.Column(
             "role",
-            sa.Enum("USER", "ADMIN", name="userroleenum"),
-            nullable=False,
+            sa.Enum("USER", "ADMIN", name="userrole"),
+            nullable=False, default=UserRoleEnum.USER,
         ),
         sa.Column("password", sa.String(), nullable=False),
         sa.Column(

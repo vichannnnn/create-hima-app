@@ -8,7 +8,7 @@ authors = [
 dependencies = [
     "alembic==1.13.1",
     "asyncpg==0.29.0",
-    "fastapi==0.109.1",
+    "fastapi==0.111.0",
     "fastapi-pagination==0.12.5",
     "passlib==1.7.4",
     "python-dotenv==1.0.0",
